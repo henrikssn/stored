@@ -1,0 +1,27 @@
+package server;
+
+enum Operation {
+  GET = 1;
+  PUT = 2;
+  DEL = 3;
+  NOP = 4;
+}
+
+message Request {
+  optional int64 tag = 1;
+  optional Operation op = 2;
+
+  optional string key = 3;
+  optional string sub_key = 4;
+
+  optional bytes value = 5;
+}
+
+message Response {
+  optional int64 tag = 1;
+
+  optional string key = 2;
+  optional string sub_key = 3;
+
+  optional bytes value = 4;
+}

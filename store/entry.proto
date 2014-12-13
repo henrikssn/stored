@@ -1,0 +1,5 @@
+package store;
+
+message Entry {
+  optional bytes value = 1;
+}

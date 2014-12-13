@@ -1,0 +1,103 @@
+package overlay;
+
+message Msg {
+  enum Cmd {
+    NOP = 0;
+    // Wants to join the network
+    JOIN = 1;
+    // Info about who is the coordinator
+    COORDINATOR_INFO = 2;
+    // General network info
+    NETWORK_INFO = 3;
+    // "I am alive"
+    HEARTBEAT = 4;
+    LEAVE = 5;
+    GET = 6;
+    PUT = 7;
+  }
+
+  optional Cmd cmd = 1;
+
+  enum Type {
+    UNEXPECTED = 0;
+    REQUEST = 1;
+    RESPONSE = 2;
+    INFO = 3;
+  }
+  optional Type type = 2;
+  optional int64 seqn = 3;
+  optional bytes data = 4;
+}
+
+message JoinRequest {
+  optional string addr = 1;
+}
+
+message JoinResponse {
+  enum Status {
+    UNEXPECTED_ERROR = 0;
+    OK = 1;
+    NOT_COORDINATOR = 2;
+  }
+  optional Status status = 1;
+  optional Member coordinator = 2;
+  optional int64 your_id = 3;
+  repeated Member members = 4;
+}
+
+message HeartbeatRequest {
+}
+
+message HeartbeatResponse {
+}
+
+message LeaveRequest {
+  optional Member kicked_member = 1;
+  repeated Member members = 2;
+}
+
+message LeaveResponse {
+}
+
+message Member {
+  optional string udp_addr = 1;
+  optional int64 id = 2;
+  repeated Member replicas = 3;
+}
+
+message NetworkInfo {
+  optional Member coordinator = 1;
+  repeated Member members = 2;
+  repeated int64 hash_to_id = 3;
+}
+
+message GetRequest {
+  optional string key = 1;
+  optional string sub_key = 2;
+}
+
+message GetResponse {
+  enum Status {
+    UNEXPECTED = 0;
+    OK = 1;
+    NOT_FOUND = 2;
+  }
+  optional Status status = 1;
+  optional bytes value = 2;
+}
+
+message PutRequest {
+  optional string key = 1;
+  optional string sub_key = 2;
+  optional bytes value = 3;
+}
+
+message PutResponse {
+  enum Status {
+    UNEXPECTED = 0;
+    OK = 1;
+    NOT_FOUND = 2;
+  }
+  optional Status status = 1;
+}
+
