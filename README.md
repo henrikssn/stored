@@ -15,23 +15,26 @@ Start a stored deamon using
 
     stored
 
-You can then use the store command util (github.com/henrikssn/store) to try out the server.
+This will expose a standard RESTful API on port 8080. It uses the URL as key and stores whatever you put in the body. Choosing a data format is up to you.
 
-    $ store put testkey testvalue
-    2014/12/14 00:15:46 tag:42
+I.e.
 
-    $ store get testkey
-    2014/12/14 00:16:24 tag:42 status:OK key:"testkey" value:"testvalue"
+    PUT /foo
+    Body: Bar
+
+will store Bar under the foo key and
+
+    GET /foo
+
+will return Bar in the Body of the HTTP response.
+
+Stored supports GET, PUT and DELETE actions.
 
 Connecting more servers
 -----------------------
 
 You can at any time connect more servers to the stored cluster. Stored uses consistent hashing
 so previous entries will not be affected.
-
-    $ store -l localhost:8000
-    $ store -c localhost:8000 -l localhost:8001
-    $ store -c localhost:8000 -l localhost:8002
 
 Status
 ------
