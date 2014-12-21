@@ -3,19 +3,19 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/henrikssn/stored/overlay"
-	"github.com/henrikssn/stored/route"
-	"github.com/henrikssn/stored/server"
+	"github.com/henrikssn/stored/endpoint"
+	"github.com/henrikssn/stored/router"
 	"github.com/henrikssn/stored/store"
 	"log"
 	"net"
+	"net/rpc"
 	"os"
 )
 
 var (
-	laddr       = flag.String("l", "127.0.0.1:8046", "The address to bind to.")
-	caddr       = flag.String("c", "", "The address of the leader.")
-	showVersion = flag.Bool("v", false, "print doozerd's version string")
+	tcpAddr     = flag.String("t", ":8081", "The tcp address to bind to for the internal RPC.")
+	httpAddr    = flag.String("h", ":8080", "The http address of which to serve the REST API.")
+	showVersion = flag.Bool("v", false, "print stored's version string")
 )
 
 func Usage() {
@@ -33,50 +33,22 @@ func main() {
 		return
 	}
 
-	if *laddr == "" {
-		fmt.Fprintln(os.Stderr, "require a listen address")
-		flag.Usage()
-		os.Exit(1)
-	}
-	log.Println("Listening on", *laddr)
+	rpc.Register(store.New())
+	rpc.Register(router.New())
+	e := endpoint.New()
+	e.RegisterInternalRPC()
+	go e.Listen(*httpAddr)
 
-	tsock, err := net.Listen("tcp", *laddr)
+	l, err := net.Listen("tcp", *tcpAddr)
 	if err != nil {
-		panic(err)
+		log.Fatal("listen error:", err)
 	}
-	defer tsock.Close()
-
-	ludp, err := net.ResolveUDPAddr("udp", *laddr)
-	if err != nil {
-		panic(err)
-	}
-	log.Println("Listening on", ludp.String())
-
-	usock, err := net.ListenUDP("udp", ludp)
-	if err != nil {
-		panic(err)
-	}
-	defer usock.Close()
-
-	cudp, err := net.ResolveUDPAddr("udp", *caddr)
-	if err != nil {
-		panic(err)
-	}
-
-	// Start a router
-	r := route.NewRouter(usock).Start()
-	store := store.New()
-
-	//Start an overlay
-	o := overlay.New(r, store, ludp, cudp)
-	if *caddr == "" {
-		o.SetCoord()
-	}
-	o.Start()
-
-	server := server.New(o)
-
-	go server.ListenAndServe(tsock)
+	go func() {
+		for {
+			conn, _ := l.Accept()
+			go rpc.ServeConn(conn)
+		}
+	}()
 
 	quit := make(chan int)
 	<-quit // Wait to be told to exit.

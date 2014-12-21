@@ -1,0 +1,17 @@
+mode: set
+github.com/henrikssn/stored/store/store.go:24.19,29.2 1 1
+github.com/henrikssn/stored/store/store.go:31.62,37.12 4 1
+github.com/henrikssn/stored/store/store.go:41.2,42.12 2 1
+github.com/henrikssn/stored/store/store.go:37.12,39.3 1 1
+github.com/henrikssn/stored/store/store.go:45.55,53.2 5 1
+github.com/henrikssn/stored/store/store.go:55.53,62.12 5 1
+github.com/henrikssn/stored/store/store.go:66.2,69.12 3 1
+github.com/henrikssn/stored/store/store.go:62.12,64.3 1 0
+github.com/henrikssn/stored/store/store.go:72.51,80.2 5 0
+github.com/henrikssn/stored/store/client.go:15.69,17.16 2 1
+github.com/henrikssn/stored/store/client.go:20.2,20.60 1 1
+github.com/henrikssn/stored/store/client.go:17.16,19.3 1 0
+github.com/henrikssn/stored/store/client.go:23.54,27.2 3 1
+github.com/henrikssn/stored/store/client.go:29.53,33.2 3 1
+github.com/henrikssn/stored/store/client.go:35.51,39.2 3 1
+github.com/henrikssn/stored/store/client.go:41.40,45.2 3 0
