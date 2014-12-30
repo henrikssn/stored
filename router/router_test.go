@@ -16,7 +16,7 @@ var (
 	err error
 
 	dsn    = "localhost:9876"
-	stores = []string{"localhost:9877", "localhost:9878", "localhost:9879", "localhost:9880"}
+	stores = []string{"localhost:9877", "localhost:9878"}
 	item   = &store.StoreItem{Key: "some key", Value: []byte{42}}
 )
 
@@ -100,5 +100,11 @@ func TestGet(t *testing.T) {
 func BenchmarkPut(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		c.Put(&store.StoreItem{Key: strconv.Itoa(i)})
+	}
+}
+
+func BenchmarkGet(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		c.Get(strconv.Itoa(i))
 	}
 }

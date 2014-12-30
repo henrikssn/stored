@@ -32,10 +32,12 @@ func main() {
 		fmt.Println("stored-0.0.1")
 		return
 	}
-
-	rpc.Register(store.New())
-	rpc.Register(router.New())
+	s := store.New()
+	r := router.New()
 	e := endpoint.New()
+
+	rpc.Register(s)
+	rpc.Register(r)
 	e.RegisterInternalRPC()
 	go e.Listen(*httpAddr)
 
@@ -49,6 +51,16 @@ func main() {
 			go rpc.ServeConn(conn)
 		}
 	}()
+
+	var ok bool
+	err = r.AddStore(*tcpAddr, &ok)
+	if err != nil {
+		log.Fatal("AddStore error:", err)
+	}
+	err = e.AddRouter(*tcpAddr)
+	if err != nil {
+		log.Fatal("AddRouter error:", err)
+	}
 
 	quit := make(chan int)
 	<-quit // Wait to be told to exit.

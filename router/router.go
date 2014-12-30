@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+var _ = log.Printf
+
 type (
 	Router struct {
 		clients  map[string]*store.Client
@@ -34,22 +36,20 @@ func (r *Router) Get(key string, resp *store.StoreItem) (err error) {
 		return err
 	}
 	*resp = *item
-	log.Printf("Router.Get(%s)=%s", key, *resp)
 	return nil
 }
 
-func (r *Router) Put(item *store.StoreItem, ack *bool) error {
+func (r *Router) Put(item *store.StoreItem, added *bool) error {
 	cs, err := r.getClientsForKey(item.Key)
 	if err != nil {
 		return err
 	}
 	for _, c := range cs {
-		_, err := c.Put(item)
+		*added, err = c.Put(item)
 		if err != nil {
 			return err
 		}
 	}
-	log.Printf("Router.Put(%s, %s)", item.Key, item.Value)
 	return nil
 }
 
@@ -64,7 +64,6 @@ func (r *Router) Delete(key string, ack *bool) error {
 			return err
 		}
 	}
-	log.Printf("Router.Delete(%s)", key)
 	return nil
 }
 

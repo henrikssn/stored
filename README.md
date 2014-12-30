@@ -19,12 +19,13 @@ This will expose a standard RESTful API on port 8080. It uses the URL as key and
 
 I.e.
 
-    PUT /foo
-    Body: Bar
+    PUT /foo HTTP/1.1
+
+    Bar
 
 will store Bar under the foo key and
 
-    GET /foo
+    GET /foo HTTP/1.1
 
 will return Bar in the Body of the HTTP response.
 

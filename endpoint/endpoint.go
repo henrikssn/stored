@@ -1,16 +1,21 @@
 package endpoint
 
 import (
+	"errors"
 	"github.com/henrikssn/stored/router"
 	"github.com/henrikssn/stored/store"
 	"github.com/stathat/consistent"
 	"io/ioutil"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"net/rpc"
+	"strings"
 	"sync"
 	"time"
 )
+
+var _ = log.Printf
 
 type (
 	Endpoint struct {
@@ -38,34 +43,51 @@ func (e *Endpoint) RegisterInternalRPC() {
 
 func (e *Endpoint) Listen(httpAddr string) {
 	http.HandleFunc("/", e.StoreHandler)
-	http.ListenAndServe(httpAddr, nil)
+	log.Println(http.ListenAndServe(httpAddr, nil))
 }
 
 func (e *Endpoint) StoreHandler(w http.ResponseWriter, req *http.Request) {
-	key := req.URL.RequestURI()
-	if key == "" {
+	namespace, group, id, err := parseURI(req.URL.RequestURI())
+	if err != nil {
+		log.Printf("HTTP Action returned error: %s", err)
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Invalid URI: " + err.Error() + "\n"))
 		return
 	}
+
+	// Temporal hack, will be replaced when store can properly handle gruops
+	key := namespace + "/" + group + "/" + id
+
 	var resp []byte
-	var err error
 	switch req.Method {
 	case "GET":
 		resp, err = e.Get(key)
+		if err != nil {
+			break
+		}
+		w.Write(resp)
 	case "PUT":
 		data, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			break
 		}
-		resp, err = e.Put(key, data)
+		added, err := e.Put(key, data)
+		if added {
+			w.WriteHeader(http.StatusCreated)
+		}
 	case "DELETE":
-		resp, err = e.Delete(key)
+		_, err = e.Delete(key)
 	}
+
 	if err != nil {
-		w.WriteHeader(400)
-		return
+		log.Printf("HTTP Action returned error: %s", err)
+		if err.Error() == "Key not found" {
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		w.Write([]byte("Error: " + err.Error() + "\n"))
 	}
-	w.Write(resp)
 }
 
 func (e *Endpoint) Get(key string) ([]byte, error) {
@@ -77,18 +99,16 @@ func (e *Endpoint) Get(key string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Endpoint.Get(%s)=%s", key, item.Value)
 	return item.Value, err
 }
 
-func (e *Endpoint) Put(key string, data []byte) ([]byte, error) {
+func (e *Endpoint) Put(key string, data []byte) (bool, error) {
 	r, err := e.internal.getRouterForKey(key)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
-	_, err = r.Put(&store.StoreItem{Key: key, Value: data})
-	log.Printf("Endpoint.Put(%s, %s)", key, data)
-	return nil, err
+	added, err := r.Put(&store.StoreItem{Key: key, Value: data})
+	return added, err
 }
 
 func (e *Endpoint) Delete(key string) ([]byte, error) {
@@ -97,8 +117,12 @@ func (e *Endpoint) Delete(key string) ([]byte, error) {
 		return nil, err
 	}
 	_, err = r.Delete(key)
-	log.Printf("Endpoint.Delete(%s)", key)
 	return nil, err
+}
+
+func (e *Endpoint) AddRouter(addr string) error {
+	var ok bool
+	return e.internal.AddRouter(addr, &ok)
 }
 
 func (e *EndpointInternal) AddRouter(addr string, ok *bool) error {
@@ -122,4 +146,12 @@ func (e *EndpointInternal) getRouterForKey(key string) (*router.Client, error) {
 	}
 	c, _ := e.routers[s]
 	return c, nil
+}
+
+func parseURI(uri string) (string, string, string, error) {
+	s := strings.Split(uri, "/")
+	if len(s) != 4 {
+		return "", "", "", errors.New("URI " + uri + " does not match /[namespace]/[key]/[id]")
+	}
+	return s[0], s[1], s[2], nil
 }

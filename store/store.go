@@ -6,6 +6,8 @@ import (
 	"sync"
 )
 
+var _ = log.Printf
+
 type (
 	Store struct {
 		items map[string][]byte
@@ -40,18 +42,18 @@ func (r *Store) Get(key string, resp *StoreItem) (err error) {
 	}
 
 	*resp = StoreItem{key, item}
-	log.Printf("Store.Get(%s)=%s", key, resp)
 	return nil
 }
 
-func (r *Store) Put(item *StoreItem, ack *bool) error {
+func (r *Store) Put(item *StoreItem, added *bool) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.items[item.Key] = item.Value
-	*ack = true
+	_, ok := r.items[item.Key]
+	*added = !ok
 
-	log.Printf("Store.Put(%s)", item)
+	r.items[item.Key] = item.Value
+
 	return nil
 }
 
@@ -69,7 +71,6 @@ func (r *Store) Delete(key string, ack *bool) error {
 	delete(r.items, key)
 	*ack = true
 
-	log.Printf("Store.Delete(%s)", key)
 	return nil
 }
 

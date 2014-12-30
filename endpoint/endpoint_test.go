@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -24,6 +25,7 @@ var (
 	storeAddr  = "localhost:9800"
 	routerAddr = "localhost:9900"
 	item       = &store.StoreItem{Key: "some key", Value: []byte{42}}
+	key        = Key{Namespace: "default", Group: "default", Id: "foo"}
 )
 
 func init() {
@@ -83,17 +85,16 @@ func startEndpoint(addr string) {
 }
 
 func TestGetEmpty(t *testing.T) {
-	val, err := c.Get("foo")
+	val, err := c.Get(key)
 	if err != nil {
 		t.Error(err)
 	}
-	if !bytes.Equal(val, []byte{}) {
-		t.Errorf("Expected: [] got: %s", val)
+	if !bytes.Equal(val, []byte("Error: Key not found\n")) {
+		t.Errorf("Expected: <Error: Key not found\\n> got: %s", val)
 	}
 }
 
 func TestPutGet(t *testing.T) {
-	key := "foo"
 	data := []byte{42}
 	err := c.Put(key, data)
 	if err != nil {
@@ -109,18 +110,69 @@ func TestPutGet(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	err := c.Delete("foo")
+	err := c.Delete(key)
 	if err != nil {
 		t.Error(err)
 	}
 }
 
 func TestGetAfterDelete(t *testing.T) {
-	val, err := c.Get("foo")
+	val, err := c.Get(key)
 	if err != nil {
 		t.Error(err)
 	}
-	if !bytes.Equal(val, []byte{}) {
-		t.Errorf("Expected: [] got: %s", val)
+	if !bytes.Equal(val, []byte("Error: Key not found\n")) {
+		t.Errorf("Expected: <Error: Key not found\\n> got: %s", val)
+	}
+}
+
+func TestHttpErrors(t *testing.T) {
+	data := []byte{42}
+
+	c.Get(key)
+	if c.Response.StatusCode != http.StatusNotFound {
+		t.Errorf("Wrong error code: %s", c.Response.Status)
+	}
+
+	c.Put(key, data)
+	if c.Response.StatusCode != http.StatusCreated {
+		t.Errorf("Wrong error code: %s", c.Response.Status)
+	}
+
+	c.Put(key, data)
+	if c.Response.StatusCode != http.StatusOK {
+		t.Errorf("Wrong error code: %s", c.Response.Status)
+	}
+
+	c.Get(key)
+	if c.Response.StatusCode != http.StatusOK {
+		t.Errorf("Wrong error code: %s", c.Response.Status)
+	}
+
+	c.Delete(key)
+	if c.Response.StatusCode != http.StatusOK {
+		t.Errorf("Wrong error code: %s", c.Response.Status)
+	}
+
+	c.Delete(key)
+	if c.Response.StatusCode != http.StatusNotFound {
+		t.Errorf("Wrong error code: %s", c.Response.Status)
+	}
+
+	c.Get(key)
+	if c.Response.StatusCode != http.StatusNotFound {
+		t.Errorf("Wrong error code: %s", c.Response.Status)
+	}
+}
+
+func BenchmarkPut(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		c.Put(Key{Id: strconv.Itoa(i)}, []byte{})
+	}
+}
+
+func BenchmarkGet(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		c.Get(Key{Id: strconv.Itoa(i)})
 	}
 }
